@@ -1,19 +1,12 @@
 from flask import Flask, render_template, request
 import pickle
 import numpy as np
-import os
-from db_config import get_connection
+from db_config import get_connection  # get_connection uses environment variables
 
 app = Flask(__name__)
 
-# Load the pre-trained model
+# Load the trained model
 model = pickle.load(open('model.pkl', 'rb'))
-
-# Fetch database connection details from environment variables
-host = os.getenv("DB_HOST")
-user = os.getenv("DB_USER")
-password = os.getenv("DB_PASSWORD")
-database = os.getenv("DB_NAME")
 
 @app.route('/')
 def home():
@@ -21,17 +14,17 @@ def home():
 
 @app.route('/predict', methods=['POST'])
 def predict():
-    # Get input values from the user
+    # Collect user inputs from form
     hours = float(request.form['hours'])
     attendance = int(request.form['attendance'])
     internal = int(request.form['internal'])
 
-    # Prepare the input data for prediction
+    # Prepare data for prediction
     input_data = np.array([[hours, attendance, internal]])
-    prediction = float(model.predict(input_data)[0])  # Convert numpy.float64 → float
+    prediction = float(model.predict(input_data)[0])
 
-    # Save prediction data to DB
-    conn = get_connection(host, user, password, database)
+    # Save prediction to MySQL database
+    conn = get_connection()
     cursor = conn.cursor()
     cursor.execute("""
         INSERT INTO predictions (hours_studied, attendance, internal_marks, predicted_score)
@@ -40,9 +33,10 @@ def predict():
     conn.commit()
     conn.close()
 
-    # Return the result back to the user
+    # Display prediction result
     return render_template('index.html', result=round(prediction, 2),
                            hours=hours, attendance=attendance, internal=internal)
 
 if __name__ == '__main__':
+    # Host and port setup for Railway deployment
     app.run(debug=True, host='0.0.0.0', port=5000)
