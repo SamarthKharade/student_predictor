@@ -1,8 +1,0 @@
-flask
-pandas
-numpy
-scikit-learn
-matplotlib
-mysql-connector-python
-gunicorn
-python-dotenv
